@@ -2,9 +2,11 @@ package mainpack;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -51,19 +53,44 @@ public class MainClass {
 					InputStream in = receiveSocket.getInputStream();
 					InputStreamReader inReader = new InputStreamReader(in);
 					BufferedReader contentReader = new BufferedReader(inReader);
-					String content = "";
-					String line;
-					while((line = contentReader.readLine()) != null){
-						content += line;
-					}
-					SaveFile saveFile = XMLHelper.decodeXMLDoc(content);
+					String CTRL = contentReader.readLine();// 控制字
+					String GET_FILE_NAME = contentReader.readLine();// 文件名
 					
-					/* 保存文件 */
-					File file = new File(SaveFileDirectory + saveFile.getFileName());
-					FileWriter out = new FileWriter(file);
-					out.write(content);
-					out.close();
-					//System.out.println(content);
+					System.out.println(CTRL + "\r\n" + GET_FILE_NAME);
+					if(CTRL.equals(GlobalVar.CTRL_SEND)){
+						String content = "";
+						String line;
+						while((line = contentReader.readLine()) != null){
+							content += line;
+						}
+						SaveFile saveFile = XMLHelper.decodeXMLDoc(content);
+					
+						/* 保存文件 */
+						File file = new File(SaveFileDirectory + saveFile.getFileName());
+						FileWriter out = new FileWriter(file);
+						out.write(content);
+						out.close();
+						//System.out.println(content);
+						
+					}else if(CTRL.equals(GlobalVar.CTRL_GET)){
+						/* 发送文件 */
+						File file = new File(SaveFileDirectory + GET_FILE_NAME);
+						FileInputStream readStream = new FileInputStream(file);
+						InputStreamReader filecontentReader = new InputStreamReader(readStream);
+						BufferedReader bufferedReader = new BufferedReader(filecontentReader);
+						String fileline;
+						String filecontent = "";
+						while((fileline = bufferedReader.readLine()) != null){
+							filecontent += fileline;
+						}
+						bufferedReader.close();
+						filecontentReader.close();
+						readStream.close();
+						SaveFile saveFile = XMLHelper.decodeXMLDoc(filecontent);
+						PrintWriter fileWriter = new PrintWriter(receiveSocket.getOutputStream(), true);
+						fileWriter.print(XMLHelper.encodeXMLDoc(saveFile) + "\r\n");// 将文件传给客户端
+						fileWriter.close();
+					}
 					contentReader.close();
 					inReader.close();
 					in.close();
